@@ -674,7 +674,6 @@ void IHyprRenderer::renderWindow(CRenderContext& ctx, PHLWINDOW pWindow, PHLMONI
 
     renderdata.pWindow = pWindow;
 
-    // for plugins
     ctx.m_data.currentWindow = pWindow;
 
     Event::bus()->m_events.render.stage.emit({RENDER_PRE_WINDOW, pMonitor, ctx});
@@ -1574,7 +1573,7 @@ void IHyprRenderer::requestBackgroundResource() {
 std::string IHyprRenderer::resolveAssetPath(const std::string& filename) {
     std::string fullPath;
     for (auto& e : ASSET_PATHS) {
-        std::string     p = std::format("{}/hypr/{}", e, filename);
+        std::string     p = std::format("{}/breakland/{}", e, filename);
         std::error_code ec;
         if (std::filesystem::exists(p, ec)) {
             fullPath = p;

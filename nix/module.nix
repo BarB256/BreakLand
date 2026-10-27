@@ -8,18 +8,23 @@ inputs:
 let
   inherit (pkgs.stdenv.hostPlatform) system;
   selflib = import ./lib.nix lib;
-  cfg = config.programs.hyprland;
+  cfg = config.programs.breakland;
 in
 {
   options = {
-    programs.hyprland = {
-      plugins = lib.mkOption {
-        type = with lib.types; listOf (either package path);
-        default = [ ];
-        description = ''
-          List of Hyprland plugins to use. Can either be packages or
-          absolute plugin paths.
-        '';
+    programs.breakland = {
+      enable = lib.mkEnableOption "BreakLand";
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = inputs.self.packages.${system}.breakland;
+        description = "The BreakLand package to install.";
+      };
+
+      portalPackage = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = inputs.self.packages.${system}.xdg-desktop-portal-breakland;
+        description = "The BreakLand desktop portal package.";
       };
 
       settings = lib.mkOption {
@@ -37,23 +42,18 @@ in
                 (listOf valueType)
               ])
               // {
-                description = "Hyprland configuration value";
+          description = "BreakLand configuration value";
               };
           in
           valueType;
         default = { };
         description = ''
-          Hyprland configuration written in Nix. Entries with the same key
+          BreakLand configuration written in Nix. Entries with the same key
           should be written as lists. Variables' and colors' names should be
           quoted. See <https://wiki.hypr.land> for more examples.
 
           Special categories (e.g `devices`) should be written as
           `"devices[device-name]"`.
-
-          ::: {.note}
-          Use the [](#programs.hyprland.plugins) option to
-          declare plugins.
-          :::
 
         '';
         example = lib.literalExpression ''
@@ -91,7 +91,7 @@ in
           submap = reset
         '';
         description = ''
-          Extra configuration lines to add to `/etc/xdg/hypr/hyprland.conf`.
+          Extra configuration lines to add to `/etc/xdg/breakland/breakland.conf`.
         '';
       };
 
@@ -123,40 +123,22 @@ in
   };
   config = lib.mkMerge [
     {
-      programs.hyprland = {
-        package = lib.mkDefault inputs.self.packages.${system}.hyprland;
-        portalPackage = lib.mkDefault inputs.self.packages.${system}.xdg-desktop-portal-hyprland;
+      programs.breakland = {
+        package = lib.mkDefault inputs.self.packages.${system}.breakland;
+        portalPackage = lib.mkDefault inputs.self.packages.${system}.xdg-desktop-portal-breakland;
       };
     }
     (lib.mkIf cfg.enable {
-      # Allows lua stub file to be accessed from /run/current-system/sw/share/hypr
-      environment.pathsToLink = [ "/share/hypr" ];
+      # Allows BreakLand assets to be accessed from the system profile.
+      environment.pathsToLink = [ "/share/breakland" ];
 
-      environment.etc."xdg/hypr/hyprland.conf" =
+      environment.etc."xdg/breakland/breakland.conf" =
         let
-          shouldGenerate = cfg.extraConfig != "" || cfg.settings != { } || cfg.plugins != [ ];
-
-          pluginsToHyprlang =
-            _plugins:
-            selflib.toHyprlang
-              {
-                topCommandsPrefixes = cfg.topPrefixes;
-                bottomCommandsPrefixes = cfg.bottomPrefixes;
-              }
-              {
-                "exec-once" =
-                  let
-                    mkEntry =
-                      entry: if lib.types.package.check entry then "${entry}/lib/lib${entry.pname}.so" else entry;
-                    hyprctl = lib.getExe' config.programs.hyprland.package "hyprctl";
-                  in
-                  map (p: "${hyprctl} plugin load ${mkEntry p}") cfg.plugins;
-              };
+          shouldGenerate = cfg.extraConfig != "" || cfg.settings != { };
         in
         lib.mkIf shouldGenerate {
           text =
-            lib.optionalString (cfg.plugins != [ ]) (pluginsToHyprlang cfg.plugins)
-            + lib.optionalString (cfg.settings != { }) (
+            lib.optionalString (cfg.settings != { }) (
               selflib.toHyprlang {
                 topCommandsPrefixes = cfg.topPrefixes;
                 bottomCommandsPrefixes = cfg.bottomPrefixes;

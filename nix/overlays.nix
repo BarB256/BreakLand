@@ -14,18 +14,17 @@ let
   ver = lib.removeSuffix "\n" (builtins.readFile ../VERSION);
 in
 {
-  # Contains what a user is most likely to care about:
-  # Hyprland itself, XDPH and the Share Picker.
+  # Contains the BreakLand compositor and its desktop integration.
   default = lib.composeManyExtensions (
     with self.overlays;
     [
-      hyprland
-      hyprland-extras
+      breakland
+      breakland-extras
     ]
   );
 
-  # Packages for variations of Hyprland, all dependencies included.
-  hyprland-packages = lib.composeManyExtensions [
+  # Packages for BreakLand and its dependencies.
+  breakland-packages = lib.composeManyExtensions [
     # Dependencies
     inputs.aquamarine.overlays.default
     inputs.hyprcursor.overlays.default
@@ -37,98 +36,77 @@ in
     inputs.hyprutils.overlays.default
     inputs.hyprwayland-scanner.overlays.default
     inputs.hyprwire.overlays.default
-    # Hyprland packages themselves
-    self.overlays.hyprland
+    # BreakLand packages themselves
+    self.overlays.breakland
   ];
 
-  # Hyprland with its internal dependencies.
-  hyprland = lib.composeManyExtensions (with self.overlays; [
-    udis86
+  # BreakLand with its internal dependencies.
+  breakland = lib.composeManyExtensions (with self.overlays; [
     glaze
-    hyprland-no-deps
+    breakland-no-deps
   ]);
 
-  # Hyprland without any dependencies.
-  hyprland-no-deps =
+  # BreakLand without any dependencies.
+  breakland-no-deps =
     final: _prev:
     let
       date = mkDate (self.lastModifiedDate or "19700101");
       version = "${ver}+date=${date}_${self.shortRev or "dirty"}";
     in
     {
-      hyprland = final.callPackage ./default.nix {
+      breakland = final.callPackage ./default.nix {
         stdenv = final.gcc16Stdenv;
         commit = self.rev or "";
         revCount = self.sourceInfo.revCount or "";
         inherit date version;
       };
 
-      hyprland-unwrapped = final.hyprland.override { wrapRuntimeDeps = false; };
+      breakland-unwrapped = final.breakland.override { wrapRuntimeDeps = false; };
 
-      hyprland-with-tests = final.hyprland.override { withTests = true; };
-
-      hyprland-with-hyprtester = builtins.trace ''
-        hyprland-with-hyprtester was removed. Please use the hyprland package.
-        Hyprtester is always built now.
-      '' final.hyprland;
+      breakland-with-tests = final.breakland.override { withTests = true; };
 
       # deprecated packages
-      hyprland-legacy-renderer = builtins.trace ''
-        hyprland-legacy-renderer was removed. Please use the hyprland package.
+      breakland-legacy-renderer = builtins.trace ''
+        breakland-legacy-renderer was removed. Please use the breakland package.
         Legacy renderer is no longer supported.
-      '' final.hyprland;
+      '' final.breakland;
 
-      hyprland-nvidia = builtins.trace ''
-        hyprland-nvidia was removed. Please use the hyprland package.
+      breakland-nvidia = builtins.trace ''
+        breakland-nvidia was removed. Please use the breakland package.
         Nvidia patches are no longer needed.
-      '' final.hyprland;
+      '' final.breakland;
 
-      hyprland-hidpi = builtins.trace ''
-        hyprland-hidpi was removed. Please use the hyprland package.
+      breakland-hidpi = builtins.trace ''
+        breakland-hidpi was removed. Please use the breakland package.
         For more information, refer to https://wiki.hypr.land/configuring/extra/xwayland/.
-      '' final.hyprland;
+      '' final.breakland;
     };
 
   # Debug
-  hyprland-debug = lib.composeManyExtensions [
+  breakland-debug = lib.composeManyExtensions [
     # Dependencies
-    self.overlays.hyprland-packages
+    self.overlays.breakland-packages
 
     (_final: prev: {
       aquamarine = prev.aquamarine.override { debug = true; };
       hyprutils = prev.hyprutils.override { debug = true; };
-      hyprland-debug = prev.hyprland.override { debug = true; };
+      breakland-debug = prev.breakland.override { debug = true; };
     })
   ];
 
-  # Packages for extra software recommended for usage with Hyprland,
+  # Packages for extra software recommended for usage with BreakLand,
   # including forked or patched packages for compatibility.
-  hyprland-extras = lib.composeManyExtensions [
+  breakland-extras = lib.composeManyExtensions [
     inputs.xdph.overlays.default
+    (_final: prev: {
+      xdg-desktop-portal-breakland = prev.xdg-desktop-portal-hyprland;
+    })
   ];
-
-  # udis86 from nixpkgs is too old, and also does not provide a .pc file
-  # this version is the one used in the git submodule, and allows us to
-  # fetch the source without '?submodules=1'
-  udis86 = final: prev: {
-    udis86-hyprland = prev.udis86.overrideAttrs (
-      _self: _super: {
-        src = final.fetchFromGitHub {
-          owner = "canihavesomecoffee";
-          repo = "udis86";
-          rev = "5336633af70f3917760a6d441ff02d93477b0c86";
-          hash = "sha256-HifdUQPGsKQKQprByeIznvRLONdOXeolOsU5nkwIv3g=";
-        };
-
-        patches = [ ];
-      }
-    );
-  };
 
   # Even though glaze itself disables it by default, nixpkgs sets ENABLE_SSL set to true.
   # Since we don't include openssl, the build failes without the `enableSSL = false;` override
   glaze = _final: prev: {
-    glaze-hyprland = prev.glaze.override {
+    glaze-breakland = prev.glaze.override {
       enableSSL = false;
       enableInterop = false;
     };

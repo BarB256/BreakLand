@@ -3,8 +3,6 @@
 
 #include "../Compositor.hpp"
 #include "../version.h"
-#include "../plugins/PluginAPI.hpp"
-#include "../plugins/PluginSystem.hpp"
 #include "../render/OpenGL.hpp"
 #include "../config/ConfigManager.hpp"
 #include "../state/MonitorState.hpp"
@@ -71,18 +69,14 @@ std::string SystemInfo::getVersion(eOutputFormat fmt) {
     std::ranges::replace(commitMsg, '#', ' ');
 
     if (fmt == IPC::Socket1::FORMAT_NORMAL) {
-        std::string result = std::format("Hyprland {} built from branch {} at commit {} {} ({}).\n"
+        std::string result = std::format("BreakLand {} built from branch {} at commit {} {} ({}).\n"
                                          "Date: {}\n"
                                          "Tag: {}, commits: {}\n",
-                                         HYPRLAND_VERSION, GIT_BRANCH, GIT_COMMIT_HASH, GIT_DIRTY, commitMsg, GIT_COMMIT_DATE, GIT_TAG, GIT_COMMITS);
+                                         BREAKLAND_VERSION, GIT_BRANCH, GIT_COMMIT_HASH, GIT_DIRTY, commitMsg, GIT_COMMIT_DATE, GIT_TAG, GIT_COMMITS);
 
         result += "\n";
         result += getBuiltSystemLibraryNames();
         result += "\n";
-        result += "Version ABI string: ";
-        result += __hyprland_api_get_hash();
-        result += "\n";
-
 #if (!ISDEBUG && !defined(NO_XWAYLAND) && !defined(BUILT_WITH_NIX))
         result += "no flags were set\n";
 #else
@@ -119,12 +113,10 @@ std::string SystemInfo::getVersion(eOutputFormat fmt) {
     "systemHyprutils": "{}",
     "systemHyprcursor": "{}",
     "systemHyprgraphics": "{}",
-    "abiHash": "{}",
     "flags": [)#",
-            GIT_BRANCH, GIT_COMMIT_HASH, HYPRLAND_VERSION, (GIT_DIRTY == std::string_view{"dirty"} ? "true" : "false"), escapeJSONStrings(commitMsg), GIT_COMMIT_DATE, GIT_TAG,
+            GIT_BRANCH, GIT_COMMIT_HASH, BREAKLAND_VERSION, (GIT_DIRTY == std::string_view{"dirty"} ? "true" : "false"), escapeJSONStrings(commitMsg), GIT_COMMIT_DATE, GIT_TAG,
             GIT_COMMITS, AQUAMARINE_VERSION, HYPRLANG_VERSION, HYPRUTILS_VERSION, HYPRCURSOR_VERSION, HYPRGRAPHICS_VERSION, getSystemLibraryVersion("aquamarine"),
-            getSystemLibraryVersion("hyprlang"), getSystemLibraryVersion("hyprutils"), getSystemLibraryVersion("hyprcursor"), getSystemLibraryVersion("hyprgraphics"),
-            __hyprland_api_get_hash());
+             getSystemLibraryVersion("hyprlang"), getSystemLibraryVersion("hyprutils"), getSystemLibraryVersion("hyprcursor"), getSystemLibraryVersion("hyprgraphics"));
 
 #if ISDEBUG
         result += "\"debug\",";
@@ -222,14 +214,6 @@ std::string SystemInfo::getSystemInfo() {
         result += std::format("os-release: {}\n\n", buffer.str());
     } else
         result += "os-release: error\n\n";
-
-    result += "plugins:\n";
-    if (g_pPluginSystem) {
-        for (auto const& pl : g_pPluginSystem->getAllPlugins()) {
-            result += std::format("  {} by {} ver {}\n", pl->m_name, pl->m_author, pl->m_version);
-        }
-    } else
-        result += "\tunknown: not runtime\n";
 
     if (g_pHyprOpenGL) {
         result += std::format("\nExplicit sync: {}", g_pHyprOpenGL->m_exts.EGL_ANDROID_native_fence_sync_ext ? "supported" : "missing");

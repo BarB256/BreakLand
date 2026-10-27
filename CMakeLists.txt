@@ -5,7 +5,7 @@ file(READ "${CMAKE_SOURCE_DIR}/VERSION" VER_RAW)
 string(STRIP ${VER_RAW} VER)
 
 project(
-  Hyprland
+  BreakLand
   DESCRIPTION "A Modern C++ Wayland Compositor"
   VERSION ${VER})
 
@@ -13,7 +13,7 @@ include(CTest)
 include(CheckIncludeFile)
 include(GNUInstallDirs)
 
-set(HYPRLAND_VERSION ${VER})
+set(BREAKLAND_VERSION ${VER})
 set(PREFIX ${CMAKE_INSTALL_PREFIX})
 set(INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR})
 set(BINDIR ${CMAKE_INSTALL_BINDIR})
@@ -35,22 +35,6 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 find_package(Python3 COMPONENTS Interpreter QUIET)
-
-# Try to find canihavesomecoffee's udis86 using pkgconfig vmd/udis86 does not
-# provide a .pc file and won't be detected this way
-pkg_check_modules(udis_dep IMPORTED_TARGET udis86>=1.7.2)
-
-# Find non-pkgconfig udis86, otherwise fallback to subproject
-if(NOT udis_dep_FOUND)
-  find_library(udis_nopc udis86)
-  if(NOT("${udis_nopc}" MATCHES "udis_nopc-NOTFOUND"))
-    message(STATUS "Found udis86 at ${udis_nopc}")
-  else()
-    add_subdirectory("subprojects/udis86")
-    include_directories("subprojects/udis86")
-    message(STATUS "udis86 dependency not found, falling back to subproject")
-  endif()
-endif()
 
 find_library(librt rt)
 if("${librt}" MATCHES "librt-NOTFOUND")
@@ -85,16 +69,16 @@ message(
   STATUS "Found wayland-scanner pkgdatadir at ${WAYLAND_SCANNER_PKGDATA_DIR}")
 
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
-  message(STATUS "Configuring Hyprland in Debug with CMake")
-  add_compile_definitions(HYPRLAND_DEBUG)
+  message(STATUS "Configuring BreakLand in Debug with CMake")
+  add_compile_definitions(BREAKLAND_DEBUG)
   set(BUILD_TESTING ON)
 else()
   add_compile_options(-O3)
-  message(STATUS "Configuring Hyprland in Release with CMake")
+  message(STATUS "Configuring BreakLand in Release with CMake")
   set(BUILD_TESTING OFF)
 endif()
 
-add_compile_definitions(HYPRLAND_VERSION="${HYPRLAND_VERSION}")
+add_compile_definitions(BREAKLAND_VERSION="${BREAKLAND_VERSION}")
 
 include_directories(. "src/" "protocols/")
 
@@ -114,10 +98,6 @@ add_compile_options(
   -frtti
   -fmacro-prefix-map=${CMAKE_SOURCE_DIR}/=)
 
-# disable lto as it may break plugins
-add_compile_options(-fno-lto)
-
-set(CMAKE_EXECUTABLE_ENABLE_EXPORTS TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 message(STATUS "Checking deps...")
@@ -303,13 +283,13 @@ if(USE_TRACY)
   message(STATUS "Tracy enabled, TRACY_CPP_FILES: " ${TRACY_CPP_FILES})
 endif()
 
-add_library(hyprland_lib STATIC ${SRCFILES})
-add_executable(Hyprland src/main.cpp ${TRACY_CPP_FILES})
-target_link_libraries(Hyprland hyprland_lib)
+add_library(breakland_lib STATIC ${SRCFILES})
+add_executable(breakland src/main.cpp ${TRACY_CPP_FILES})
+target_link_libraries(breakland breakland_lib)
 
-target_include_directories(hyprland_lib PUBLIC ${deps_INCLUDE_DIRS} ${LUA_INCLUDE_DIRS})
-target_include_directories(Hyprland PUBLIC ${deps_INCLUDE_DIRS} ${LUA_INCLUDE_DIRS})
-target_link_libraries(hyprland_lib PRIVATE glaze::glaze)
+target_include_directories(breakland_lib PUBLIC ${deps_INCLUDE_DIRS} ${LUA_INCLUDE_DIRS})
+target_include_directories(breakland PUBLIC ${deps_INCLUDE_DIRS} ${LUA_INCLUDE_DIRS})
+target_link_libraries(breakland_lib PRIVATE glaze::glaze)
 
 set(USE_GPROF OFF)
 
@@ -319,8 +299,8 @@ if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
   if(WITH_ASAN)
     message(STATUS "Enabling ASan")
 
-    target_link_libraries(hyprland_lib PUBLIC asan)
-    target_compile_options(hyprland_lib PUBLIC -fsanitize=address)
+    target_link_libraries(breakland_lib PUBLIC asan)
+    target_compile_options(breakland_lib PUBLIC -fsanitize=address)
   endif()
 
   add_compile_options(-fno-pie -fno-builtin -fno-omit-frame-pointer)
@@ -340,7 +320,7 @@ if(USE_TRACY)
 
   add_compile_options(-fno-omit-frame-pointer)
 
-  target_link_libraries(hyprland_lib PUBLIC Tracy::TracyClient)
+  target_link_libraries(breakland_lib PUBLIC Tracy::TracyClient)
 
   if(USE_TRACY_GPU)
     message(STATUS "Tracy GPU Profiling is turned on")
@@ -361,19 +341,19 @@ endif()
 include(CheckLibraryExists)
 check_library_exists(execinfo backtrace "" HAVE_LIBEXECINFO)
 if(HAVE_LIBEXECINFO)
-  target_link_libraries(hyprland_lib PUBLIC execinfo)
+    target_link_libraries(breakland_lib PUBLIC execinfo)
 endif()
 
 check_include_file("sys/timerfd.h" HAS_TIMERFD)
 pkg_check_modules(epoll IMPORTED_TARGET epoll-shim)
 if(NOT HAS_TIMERFD AND epoll_FOUND)
-  target_link_libraries(hyprland_lib PUBLIC PkgConfig::epoll)
+    target_link_libraries(breakland_lib PUBLIC PkgConfig::epoll)
 endif()
 
 check_include_file("sys/inotify.h" HAS_INOTIFY)
 pkg_check_modules(inotify IMPORTED_TARGET libinotify)
 if(NOT HAS_INOTIFY AND inotify_FOUND)
-  target_link_libraries(hyprland_lib PUBLIC PkgConfig::inotify)
+    target_link_libraries(breakland_lib PUBLIC PkgConfig::inotify)
 endif()
 
 # sdbus-c++ is used to ask rtkit for realtime scheduling which is Linux-only
@@ -381,7 +361,7 @@ if(NO_RTKIT OR NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
   message(STATUS "rtkit realtime scheduling is disabled!")
 else()
   pkg_check_modules(sdbus_dep REQUIRED IMPORTED_TARGET sdbus-c++>=2.0.0)
-  target_link_libraries(hyprland_lib PUBLIC PkgConfig::sdbus_dep)
+  target_link_libraries(breakland_lib PUBLIC PkgConfig::sdbus_dep)
   add_compile_definitions(HAS_RTKIT)
 endif()
 
@@ -408,10 +388,8 @@ else()
   string(JOIN ", " PKGCONFIG_XWAYLAND_DEPENDENCIES ${XWAYLAND_DEPENDENCIES})
   string(PREPEND PKGCONFIG_XWAYLAND_DEPENDENCIES ", ")
 
-  target_link_libraries(hyprland_lib PUBLIC PkgConfig::xdeps)
+  target_link_libraries(breakland_lib PUBLIC PkgConfig::xdeps)
 endif()
-
-configure_file(hyprland.pc.in hyprland.pc @ONLY)
 
 if(NO_SYSTEMD)
   message(STATUS "SYSTEMD support is disabled...")
@@ -419,7 +397,7 @@ else()
   message(STATUS "SYSTEMD support is requested (NO_SYSTEMD not defined)...")
   add_compile_definitions(USES_SYSTEMD)
 
-  install(FILES ${CMAKE_SOURCE_DIR}/systemd/hyprland-session.target
+  install(FILES ${CMAKE_SOURCE_DIR}/systemd/breakland-session.target
           DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/user)
 
   # session file -uwsm
@@ -427,7 +405,7 @@ else()
     message(STATUS "UWSM support is disabled...")
   else()
     message(STATUS "UWSM support is enabled (NO_UWSM not defined)...")
-    install(FILES ${CMAKE_SOURCE_DIR}/systemd/hyprland-uwsm.desktop
+    install(FILES ${CMAKE_SOURCE_DIR}/systemd/breakland-uwsm.desktop
             DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/wayland-sessions)
   endif()
 endif()
@@ -440,14 +418,14 @@ if(CMAKE_DISABLE_PRECOMPILE_HEADERS)
   message(STATUS "Not using precompiled headers")
 else()
   message(STATUS "Setting precompiled headers")
-  target_precompile_headers(hyprland_lib PRIVATE
+  target_precompile_headers(breakland_lib PRIVATE
                             $<$<COMPILE_LANGUAGE:CXX>:src/pch/pch.hpp>)
 endif()
 
 message(STATUS "Setting link libraries")
 
 target_link_libraries(
-  hyprland_lib
+  breakland_lib
   PUBLIC
   PkgConfig::aquamarine_dep
   PkgConfig::hyprlang_dep
@@ -458,20 +436,7 @@ target_link_libraries(
   PkgConfig::LUA
 )
 
-target_link_libraries(
-  Hyprland
-  ${LIBRT}
-  hyprland_lib)
-if(udis_dep_FOUND)
-  target_link_libraries(hyprland_lib PUBLIC PkgConfig::udis_dep)
-elseif(NOT("${udis_nopc}" MATCHES "udis_nopc-NOTFOUND"))
-  target_link_libraries(hyprland_lib PUBLIC ${udis_nopc})
-else()
-  target_link_libraries(hyprland_lib PUBLIC libudis86)
-endif()
-
-# used by `make installheaders`, to ensure the headers are generated
-add_custom_target(generate-protocol-headers)
+target_link_libraries(breakland ${LIBRT} breakland_lib)
 
 if(Python3_Interpreter_FOUND)
   add_custom_target(
@@ -481,8 +446,8 @@ if(Python3_Interpreter_FOUND)
     COMMENT "Generating Lua API stubs for LuaLS"
     VERBATIM)
 
-  add_dependencies(hyprland_lib generate-lua-stubs)
-  add_dependencies(Hyprland generate-lua-stubs)
+  add_dependencies(breakland_lib generate-lua-stubs)
+  add_dependencies(breakland generate-lua-stubs)
 
   add_custom_target(
     check-lua-stubs
@@ -508,11 +473,8 @@ function(protocolnew protoPath protoName external)
     COMMAND hyprwayland-scanner ${path}/${protoName}.xml
             ${CMAKE_SOURCE_DIR}/protocols/
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  target_sources(hyprland_lib PRIVATE protocols/${protoName}.cpp
+  target_sources(breakland_lib PRIVATE protocols/${protoName}.cpp
                                   protocols/${protoName}.hpp)
-  target_sources(generate-protocol-headers
-                 PRIVATE ${CMAKE_SOURCE_DIR}/protocols/${protoName}.hpp)
-
   list(APPEND PROTOCOL_SOURCES "${CMAKE_SOURCE_DIR}/protocols/${protoName}.cpp")
   set(PROTOCOL_SOURCES "${PROTOCOL_SOURCES}" PARENT_SCOPE)
   list(APPEND PROTOCOL_SOURCES "${CMAKE_SOURCE_DIR}/protocols/${protoName}.hpp")
@@ -526,10 +488,7 @@ function(protocolWayland)
       hyprwayland-scanner --wayland-enums
       ${WAYLAND_SCANNER_PKGDATA_DIR}/wayland.xml ${CMAKE_SOURCE_DIR}/protocols/
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  target_sources(hyprland_lib PRIVATE protocols/wayland.cpp protocols/wayland.hpp)
-  target_sources(generate-protocol-headers
-                 PRIVATE ${CMAKE_SOURCE_DIR}/protocols/wayland.hpp)
-
+  target_sources(breakland_lib PRIVATE protocols/wayland.cpp protocols/wayland.hpp)
   list(APPEND PROTOCOL_SOURCES "${CMAKE_SOURCE_DIR}/protocols/wayland.hpp")
   set(PROTOCOL_SOURCES "${PROTOCOL_SOURCES}" PARENT_SCOPE)
   list(APPEND PROTOCOL_SOURCES "${CMAKE_SOURCE_DIR}/protocols/wayland.cpp")
@@ -537,9 +496,9 @@ function(protocolWayland)
 endfunction()
 
 if(TARGET OpenGL::GL)
-  target_link_libraries(hyprland_lib PUBLIC OpenGL::EGL OpenGL::GL glslang::glslang glslang::glslang-default-resource-limits glslang::SPIRV Threads::Threads)
+  target_link_libraries(breakland_lib PUBLIC OpenGL::EGL OpenGL::GL glslang::glslang glslang::glslang-default-resource-limits glslang::SPIRV Threads::Threads)
 else()
-  target_link_libraries(hyprland_lib PUBLIC OpenGL::EGL OpenGL::GLES3 glslang::glslang glslang::glslang-default-resource-limits glslang::SPIRV Threads::Threads)
+  target_link_libraries(breakland_lib PUBLIC OpenGL::EGL OpenGL::GLES3 glslang::glslang glslang::glslang-default-resource-limits glslang::SPIRV Threads::Threads)
 endif()
 
 pkg_check_modules(hyprland_protocols_dep REQUIRED hyprland-protocols>=0.8.0)
@@ -625,13 +584,6 @@ protocolwayland()
 add_subdirectory(hyprctl)
 add_subdirectory(start)
 
-if(NO_HYPRPM)
-  message(STATUS "hyprpm is disabled")
-else()
-  add_subdirectory(hyprpm)
-  message(STATUS "hyprpm is enabled (NO_HYPRPM not defined)")
-endif()
-
 # Set proper permissions for directories, otherwise they could end up 700
 set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
     OWNER_READ OWNER_WRITE OWNER_EXECUTE
@@ -639,100 +591,69 @@ set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
     WORLD_READ WORLD_EXECUTE)
 
 # binary and symlink
-install(TARGETS Hyprland)
+install(TARGETS breakland)
 
-install(
-  CODE "execute_process( \
-        COMMAND ${CMAKE_COMMAND} -E create_symlink \
-        ${CMAKE_INSTALL_FULL_BINDIR}/Hyprland \
-        \"\$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/hyprland\" \
-        )")
 # session file
 configure_file(
-    ${CMAKE_SOURCE_DIR}/example/hyprland.desktop.in
-    ${CMAKE_SOURCE_DIR}/example/hyprland.desktop
+    ${CMAKE_SOURCE_DIR}/example/breakland.desktop.in
+    ${CMAKE_SOURCE_DIR}/example/breakland.desktop
     @ONLY
 )
-install(FILES ${CMAKE_SOURCE_DIR}/example/hyprland.desktop
+install(FILES ${CMAKE_SOURCE_DIR}/example/breakland.desktop
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/wayland-sessions)
 
-# allow Hyprland to find assets
+# allow BreakLand to find assets
 add_compile_definitions(DATAROOTDIR="${CMAKE_INSTALL_FULL_DATAROOTDIR}")
 
 # installable assets
 file(GLOB_RECURSE INSTALLABLE_ASSETS "assets/install/*")
 install(FILES ${INSTALLABLE_ASSETS}
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/hypr)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/breakland)
 
 # default lua config
-install(FILES ${CMAKE_SOURCE_DIR}/example/hyprland.lua
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/hypr)
+install(FILES ${CMAKE_SOURCE_DIR}/example/breakland.lua
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/breakland)
 
 # LuaLS stubs
 install(FILES ${CMAKE_SOURCE_DIR}/meta/hl.meta.lua
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/hypr/stubs)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/breakland/stubs)
 
 # portal config
-install(FILES ${CMAKE_SOURCE_DIR}/assets/hyprland-portals.conf
+install(FILES ${CMAKE_SOURCE_DIR}/assets/breakland-portals.conf
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/xdg-desktop-portal)
 
 # man pages
 file(GLOB_RECURSE MANPAGES "docs/*.1")
 install(FILES ${MANPAGES} DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
-# pkgconfig entry
-install(FILES ${CMAKE_BINARY_DIR}/hyprland.pc
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
-
-# protocol headers
-set(HEADERS_PROTO "${CMAKE_CURRENT_SOURCE_DIR}/protocols")
-install(
-  DIRECTORY ${HEADERS_PROTO}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hyprland
-  FILES_MATCHING
-  PATTERN "*.h*")
-
-# hyprland headers
-set(HEADERS_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-install(
-  DIRECTORY ${HEADERS_SRC}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/hyprland
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN "*.hpp"
-  PATTERN "*.inc")
-
 if(BUILD_TESTING OR WITH_TESTS)
   message(STATUS "Building tests")
-
-  # hyprtester
-  add_subdirectory(hyprtester)
 
   # GTest
   find_package(GTest CONFIG REQUIRED)
   include(GoogleTest)
   file(GLOB_RECURSE TESTFILES "tests/*.cpp")
-  add_executable(hyprland_gtests ${TESTFILES})
-  target_compile_options(hyprland_gtests PRIVATE --coverage)
-  target_link_options(hyprland_gtests PRIVATE --coverage)
+  add_executable(breakland_gtests ${TESTFILES})
+  target_compile_options(breakland_gtests PRIVATE --coverage)
+  target_link_options(breakland_gtests PRIVATE --coverage)
   target_include_directories(
-    hyprland_gtests
+    breakland_gtests
     PUBLIC "./include"
     PRIVATE "./src" "./src/include" "./protocols" "${CMAKE_BINARY_DIR}")
 
-  target_link_libraries(hyprland_gtests hyprland_lib GTest::gtest_main)
+  target_link_libraries(breakland_gtests breakland_lib GTest::gtest_main)
 
-  gtest_discover_tests(hyprland_gtests)
+  gtest_discover_tests(breakland_gtests)
 
   # Enable coverage in main hyprland lib
-  target_compile_options(hyprland_lib PRIVATE --coverage)
-  target_link_options(hyprland_lib PRIVATE --coverage)
-  target_link_libraries(hyprland_lib PUBLIC gcov)
+  target_compile_options(breakland_lib PRIVATE --coverage)
+  target_link_options(breakland_lib PRIVATE --coverage)
+  target_link_libraries(breakland_lib PUBLIC gcov)
 
   # Enable coverage in hyprland exe
-  target_compile_options(Hyprland PRIVATE --coverage)
-  target_link_options(Hyprland PRIVATE --coverage)
-  target_link_libraries(Hyprland gcov)
+  target_compile_options(breakland PRIVATE --coverage)
+  target_link_options(breakland PRIVATE --coverage)
+  target_link_libraries(breakland gcov)
 endif()
 
 if(BUILD_TESTING)
@@ -741,7 +662,7 @@ if(BUILD_TESTING)
   enable_testing()
   add_custom_target(tests)
 
-  add_dependencies(tests hyprland_gtests)
+  add_dependencies(tests breakland_gtests)
 
 else()
   message(STATUS "Testing is disabled")

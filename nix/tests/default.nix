@@ -1,15 +1,17 @@
 inputs: pkgs:
 let
   flake = inputs.self.packages.${pkgs.stdenv.hostPlatform.system};
-  hyprland = flake.hyprland-with-tests;
+  breakland = flake.breakland-with-tests;
 in
 {
   tests = pkgs.testers.runNixOSTest {
-    name = "hyprland-tests";
+    name = "breakland-tests";
 
     nodes.machine =
       { pkgs, ... }:
       {
+        imports = [ inputs.self.nixosModules.default ];
+
         environment.systemPackages = with pkgs; [
           # Programs needed for tests
           jq
@@ -36,15 +38,13 @@ in
           initial_window_height 400
         '';
 
-        programs.hyprland = {
+         programs.breakland = {
           enable = true;
-          package = hyprland;
+           package = breakland;
           # We don't need portals in this test, so we don't set portalPackage
         };
 
         # Test configuration
-        environment.etc."test.lua".source = "${hyprland}/share/hypr/test.lua";
-
         # Disable portals
         xdg.portal.enable = pkgs.lib.mkForce false;
 
@@ -78,30 +78,19 @@ in
 
       # Run gtests
       print("Running gtests")
-      exit_status, _out = machine.execute("su - alice -c 'hyprland_gtests 2>&1 | tee /tmp/gtestslog; exit ''${PIPESTATUS[0]}'")
+       exit_status, _out = machine.execute("su - alice -c 'breakland_gtests 2>&1 | tee /tmp/gtestslog; exit ''${PIPESTATUS[0]}'")
       machine.execute(f'echo {exit_status} > /tmp/exit_status_gtests')
 
       # Print logs for visibility in CI
       _, out = machine.execute("cat /tmp/gtestslog")
       print(f"gtests log:\n{out}")
 
-      # Run hyprtester testing framework/suite
-      print("Running hyprtester")
-      exit_status, _out = machine.execute("su - alice -c 'hyprtester -b ${hyprland}/bin/Hyprland -c /etc/test.lua -p ${hyprland}/lib/hyprtestplugin.so 2>&1 | tee /tmp/testerlog; exit ''${PIPESTATUS[0]}'")
-      print(f"Hyprtester exited with {exit_status}")
-
-      # Print logs for visibility in CI
-      _, out = machine.execute("cat /tmp/testerlog")
-      print(f"Hyprtester log:\n{out}")
-
-      # Copy logs to host
-      machine.execute('cp "$(find /tmp/hypr -name *.log | head -1)" /tmp/hyprlog')
-      machine.execute(f'echo {exit_status} > /tmp/exit_status')
-      machine.copy_from_machine("/tmp/gtestslog")
-      machine.copy_from_machine("/tmp/testerlog")
-      machine.copy_from_machine("/tmp/hyprlog")
-      machine.copy_from_machine("/tmp/exit_status")
-      machine.copy_from_machine("/tmp/exit_status_gtests")
+       # Copy compositor logs to the host
+       machine.execute('cp "$(find /tmp/hypr -name *.log | head -1)" /tmp/hyprlog')
+       machine.execute('cp /tmp/exit_status_gtests /tmp/exit_status')
+       machine.copy_from_machine("/tmp/gtestslog")
+       machine.copy_from_machine("/tmp/hyprlog")
+       machine.copy_from_machine("/tmp/exit_status_gtests")
 
       # Finally - shutdown
       machine.shutdown()

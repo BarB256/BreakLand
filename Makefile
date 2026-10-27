@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 
 stub:
-	@echo "Do not run $(MAKE) directly without any arguments. Please refer to the wiki on how to compile Hyprland."
+	@echo "Do not run $(MAKE) directly without any arguments. Please refer to the BreakLand build documentation."
 
 release:
 	cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX:STRING=${PREFIX} -S . -B ./build
@@ -30,50 +30,27 @@ install:
 uninstall:
 	xargs rm < ./build/install_manifest.txt
 
-pluginenv:
-	@echo -en "$(MAKE) pluginenv has been deprecated.\nPlease run $(MAKE) all && sudo $(MAKE) installheaders\n"
-	@exit 1
-
-installheaders:
-	@if [ ! -f ./src/version.h ]; then echo -en "You need to run $(MAKE) all first.\n" && exit 1; fi
-
-	# remove previous headers from hyprpm's dir
-	rm -fr ${PREFIX}/include/hyprland
-	mkdir -p ${PREFIX}/include/hyprland
-	mkdir -p ${PREFIX}/include/hyprland/protocols
-	mkdir -p ${PREFIX}/share/pkgconfig
-
-	cmake --build ./build --config Release --target generate-protocol-headers
-
-	find src -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.inc' \) -print0 | cpio --quiet -0dump ${PREFIX}/include/hyprland
-	cp ./protocols/*.h* ${PREFIX}/include/hyprland/protocols
-	cp ./build/hyprland.pc ${PREFIX}/share/pkgconfig
-	if [ -d /usr/share/pkgconfig ]; then cp ./build/hyprland.pc /usr/share/pkgconfig 2>/dev/null || true; fi
-
-	chmod -R 755 ${PREFIX}/include/hyprland
-	chmod 755 ${PREFIX}/share/pkgconfig
-
 man:
-	pandoc ./docs/Hyprland.1.rst \
+	pandoc ./docs/BreakLand.1.rst \
 		--standalone \
-		--variable=header:"Hyprland User Manual" \
+		--variable=header:"BreakLand User Manual" \
 		--variable=date:"${DATE}" \
 		--variable=section:1 \
 		--from rst \
-		--to man > ./docs/Hyprland.1
+		--to man > ./docs/BreakLand.1
 
-	pandoc ./docs/hyprctl.1.rst \
+	pandoc ./docs/breakctl.1.rst \
 		--standalone \
-		--variable=header:"hyprctl User Manual" \
+		--variable=header:"breakctl User Manual" \
 		--variable=date:"${DATE}" \
 		--variable=section:1 \
 		--from rst \
-		--to man > ./docs/hyprctl.1
+		--to man > ./docs/breakctl.1
 
 asan:
 	@echo -en "!!WARNING!!\nOnly run this in the TTY.\n"
-	@pidof Hyprland > /dev/null && echo -ne "Refusing to run with Hyprland running.\n" || echo ""
-	@pidof Hyprland > /dev/null && exit 1 || echo ""
+	@pidof breakland > /dev/null && echo -ne "Refusing to run with BreakLand running.\n" || echo ""
+	@pidof breakland > /dev/null && exit 1 || echo ""
 
 	rm -rf ./wayland
 	#git reset --hard
@@ -90,24 +67,22 @@ asan:
 	patch -p1 < ./scripts/hyprlandStaticAsan.diff
 	cmake --no-warn-unused-cli -DCMAKE_BUILD_TYPE:STRING=Debug -DWITH_ASAN:STRING=True -DUSE_TRACY:STRING=False -DUSE_TRACY_GPU:STRING=False -S . -B ./build
 	cmake --build ./build --config Debug --target all
-	@echo "Hyprland done"
+	@echo "BreakLand done"
 
-	ASAN_OPTIONS="detect_odr_violation=0,log_path=asan.log" HYPRLAND_NO_CRASHREPORTER=1 ./build/Hyprland -c ~/.config/hypr/hyprland.lua
+	ASAN_OPTIONS="detect_odr_violation=0,log_path=asan.log" BREAKLAND_NO_CRASHREPORTER=1 ./build/breakland -c ~/.config/breakland/breakland.lua
 
 format-check:
-	@find src hyprctl hyprpm start tests hyprtester -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
+	@find src hyprctl start tests -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
 		! -path "src/render/shaders/Shaders.hpp" \
 		! -path "hyprctl/hw-protocols/*" \
-		! -path "hyprtester/protocols/*" \
 		| xargs clang-format --dry-run --Werror
 
 format-fix:
-	@find src hyprctl hyprpm start tests hyprtester -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
+	@find src hyprctl start tests -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" \) \
 		! -path "src/render/shaders/Shaders.hpp" \
 		! -path "hyprctl/hw-protocols/*" \
-		! -path "hyprtester/protocols/*" \
 		| xargs clang-format -i
 
 test:
 	$(MAKE) debug
-	./build/hyprtester/hyprtester -c hyprtester/test.lua -b ./build/Hyprland -p hyprtester/plugin/hyprtestplugin.so $(TESTS)
+	./build/breakland_gtests $(TESTS)
