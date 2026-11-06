@@ -1,4 +1,5 @@
 #include "CrashReporter.hpp"
+#include "../../version.h"
 #include <fcntl.h>
 #include <sys/utsname.h>
 #include <link.h>
