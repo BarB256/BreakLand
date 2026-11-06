@@ -116,7 +116,6 @@ customStdenv.mkDerivation (finalAttrs: {
             ../hyprctl
             ../LICENSE
             ../meta
-            ../nix
             ../protocols
             ../src
             ../start
@@ -235,11 +234,11 @@ customStdenv.mkDerivation (finalAttrs: {
   };
 
   postInstall = ''
-    install -Dm644 nix/generate-config.nix $out/share/breakland/generate-config.nix
-    install -Dm644 nix/lib.nix $out/share/breakland/lib.nix
+    install -Dm644 ${./generate-config.nix} $out/share/breakland/generate-config.nix
+    install -Dm644 ${./lib.nix} $out/share/breakland/lib.nix
 
     mv $out/bin/start-breakland $out/bin/start-breakland-bin
-    substitute nix/start-breakland.sh $out/bin/start-breakland \
+    substitute ${./start-breakland.sh} $out/bin/start-breakland \
       --replace-fail @BREAKLAND_GENERATOR@ $out/share/breakland/generate-config.nix \
       --replace-fail @START_BREAKLAND_BIN@ $out/bin/start-breakland-bin
     chmod 755 $out/bin/start-breakland
