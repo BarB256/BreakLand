@@ -1,5 +1,6 @@
 
 #include "Compositor.hpp"
+#include "version.h"
 #include "helpers/MiscFunctions.hpp"
 #include "render/decorations/DecorationPositioner.hpp"
 #include "config/supplementary/executor/Executor.hpp"
