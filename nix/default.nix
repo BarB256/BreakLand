@@ -116,9 +116,7 @@ customStdenv.mkDerivation (finalAttrs: {
             ../hyprctl
             ../LICENSE
             ../meta
-            ../nix/generate-config.nix
-            ../nix/lib.nix
-            ../nix/start-breakland.sh
+            ../nix
             ../protocols
             ../src
             ../start
