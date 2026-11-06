@@ -32,13 +32,15 @@ RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 LUA_CONFIG="$RUNTIME_DIR/breakland-config-$$.lua"
 trap 'rm -f "$LUA_CONFIG"' EXIT INT TERM
 
+BREAKLAND_CONFIG_PATH="$CONFIG" \
+BREAKLAND_GENERATOR_PATH="$GENERATOR" \
 nix eval \
     --impure \
     --extra-experimental-features 'nix-command flakes' \
     --raw \
-    --argstr configPath "$CONFIG" \
-    --argstr generatorPath "$GENERATOR" \
     --expr 'let
+      configPath = builtins.getEnv "BREAKLAND_CONFIG_PATH";
+      generatorPath = builtins.getEnv "BREAKLAND_GENERATOR_PATH";
       lib = (builtins.getFlake "nixpkgs").lib;
       config = import (/. + configPath);
     in import (/. + generatorPath) { inherit lib config; }' \
