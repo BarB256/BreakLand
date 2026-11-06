@@ -7,8 +7,7 @@ inputs:
 }:
 let
   inherit (pkgs.stdenv.hostPlatform) system;
-  selflib = import ./lib.nix lib;
-  cfg = config.programs.breakland;
+   cfg = config.programs.breakland;
 in
 {
   options = {
@@ -25,6 +24,39 @@ in
         type = lib.types.nullOr lib.types.package;
         default = inputs.self.packages.${system}.xdg-desktop-portal-breakland;
         description = "The BreakLand desktop portal package.";
+      };
+
+      font = lib.mkOption {
+        type = with lib.types; attrsOf (oneOf [ str int ]);
+        default = {
+          family = "Sans";
+          size = 11;
+        };
+        description = "Default BreakLand and shell font settings.";
+      };
+
+      background = lib.mkOption {
+        type = with lib.types; attrsOf str;
+        default = { color = "0xff000000"; };
+        description = "Default BreakLand background settings.";
+      };
+
+      terminal = lib.mkOption {
+        type = lib.types.str;
+        default = "foot";
+        description = "Terminal command used by the default keybindings.";
+      };
+
+      launcher = lib.mkOption {
+        type = lib.types.str;
+        default = "fuzzel";
+        description = "Application launcher command used by the default keybindings.";
+      };
+
+      keybindings = lib.mkOption {
+        type = with lib.types; attrsOf str;
+        default = { };
+        description = "Keybindings mapping a key chord to an executable command.";
       };
 
       shell = {
@@ -85,26 +117,6 @@ in
         '';
       };
 
-      extraConfig = lib.mkOption {
-        type = lib.types.lines;
-        default = "";
-        example = ''
-          # window resize
-          bind = $mod, S, submap, resize
-
-          submap = resize
-          binde = , right, resizeactive, 10 0
-          binde = , left, resizeactive, -10 0
-          binde = , up, resizeactive, 0 -10
-          binde = , down, resizeactive, 0 10
-          bind = , escape, submap, reset
-          submap = reset
-        '';
-        description = ''
-          Extra Lua configuration lines appended to the generated config.
-        '';
-      };
-
     };
   };
   config = lib.mkMerge [
@@ -131,30 +143,14 @@ in
         };
       };
 
-      environment.etc."xdg/breakland/breakland.lua" = {
-        text = selflib.toBreaklandLua {
-          settings = lib.recursiveUpdate {
-            general = {
-              gaps_in = 5;
-              gaps_out = 20;
-              border_size = 2;
-              layout = "dwindle";
-            };
-            misc = {
-              disable_hyprland_logo = true;
-              disable_splash_rendering = true;
-              background_color = 4278190080;
-              font_family = "Sans";
-            };
-            input = {
-              kb_layout = "us";
-            };
-          } cfg.settings;
-          keybindings = {
-            "SUPER + Return" = "foot";
-            "SUPER + Space" = "fuzzel";
-          };
-          extraConfig = cfg.extraConfig;
+      environment.etc."xdg/breakland/config.nix" = {
+        text = builtins.toJSON {
+          compositor = cfg.settings;
+          font = cfg.font;
+          background = cfg.background;
+          terminal = cfg.terminal;
+          launcher = cfg.launcher;
+          keybindings = cfg.keybindings;
         };
       };
     })
