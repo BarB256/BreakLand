@@ -77,7 +77,7 @@ static std::expected<void, std::string> doWallpaper(const std::string_view& RHS)
     if (!PATH)
         return std::unexpected(std::format("bad path: {}", PATH_RAW));
 
-    auto socketPath = std::format("{}/hypr/{}/{}", RTDIR, HIS, SOCKET_NAME);
+    auto socketPath = std::format("{}/breakland/{}/{}", RTDIR, HIS, SOCKET_NAME);
 
     auto socket = Hyprwire::IClientSocket::open(socketPath);
 
@@ -147,7 +147,7 @@ static std::expected<void, std::string> doListActive() {
     if (!HIS || HIS[0] == '\0')
         return std::unexpected("can't send: no BREAKLAND_INSTANCE_SIGNATURE (not running under BreakLand)");
 
-    auto socketPath = std::format("{}/hypr/{}/{}", RTDIR, HIS, SOCKET_NAME);
+    auto socketPath = std::format("{}/breakland/{}/{}", RTDIR, HIS, SOCKET_NAME);
 
     auto socket = Hyprwire::IClientSocket::open(socketPath);
 

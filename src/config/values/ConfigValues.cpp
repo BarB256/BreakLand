@@ -561,8 +561,8 @@ std::vector<SP<IValue>> Values::getConfigValues() {
          * misc:
          */
 
-        MS<Bool>("misc:disable_hyprland_logo", "disables the random Hyprland logo / anime girl background. :(", false),
-        MS<Bool>("misc:disable_splash_rendering", "disables the Hyprland splash rendering.", false),
+        MS<Bool>("misc:disable_hyprland_logo", "disables the inherited wallpaper background.", true),
+        MS<Bool>("misc:disable_splash_rendering", "disables the inherited splash rendering.", true),
         MS<Color>("misc:col.splash", "Changes the color of the splash text.", 0x55ffffff),
         MS<String>("misc:font_family", "Set the global default font to render the text.", "Sans"),
         MS<String>("misc:splash_font_family", "Changes the font used to render the splash text.", "[[EMPTY]]"),
@@ -586,7 +586,7 @@ std::vector<SP<IValue>> Values::getConfigValues() {
         MS<Bool>("misc:allow_session_lock_restore", "if true, will allow you to restart a lockscreen app in case it crashes.", false),
         MS<Bool>("misc:session_lock_xray", "keep rendering workspaces below your lockscreen", false),
         MS<Bool>("misc:session_lock_blur", "Enable blur for lockscreen. You probably want to enable `session_lock_xray`.", false),
-        MS<Color>("misc:background_color", "change the background color.", 0xff111111),
+        MS<Color>("misc:background_color", "change the background color.", 0xff000000),
         MS<Bool>("misc:close_special_on_empty", "close the special workspace if the last window is removed", true),
         MS<Int>("misc:on_focus_under_fullscreen", "if there is a fullscreen or maximized window, decide whether a tiled window requested to focus should replace it.", 2,
                 {.min = 0, .max = 2, .map = OptionMap{{"ignore", 0}, {"take_over", 1}, {"exit_fullscreen", 2}}}),
@@ -716,8 +716,6 @@ std::vector<SP<IValue>> Values::getConfigValues() {
          * ecosystem:
          */
 
-        MS<Bool>("ecosystem:no_update_news", "disable the popup that shows up when you update hyprland to a new version.", false),
-        MS<Bool>("ecosystem:no_donation_nag", "disable the popup that shows up twice a year encouraging to donate.", false),
         MS<Bool>("ecosystem:enforce_permissions", "whether to enable permission control.", false),
 
         /*

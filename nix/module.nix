@@ -27,8 +27,22 @@ in
         description = "The BreakLand desktop portal package.";
       };
 
+      shell = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether to install the BreakLand Quickshell desktop shell.";
+        };
+
+        package = lib.mkOption {
+          type = lib.types.package;
+          default = inputs.self.packages.${system}.breakland-shell;
+          description = "The BreakLand Quickshell package.";
+        };
+      };
+
       settings = lib.mkOption {
-        type =
+          type =
           with lib.types;
           let
             valueType =
@@ -48,12 +62,8 @@ in
           valueType;
         default = { };
         description = ''
-          BreakLand configuration written in Nix. Entries with the same key
-          should be written as lists. Variables' and colors' names should be
-          quoted. See <https://wiki.hypr.land> for more examples.
-
-          Special categories (e.g `devices`) should be written as
-          `"devices[device-name]"`.
+          BreakLand compositor settings written in Nix. Nested attribute sets
+          become Lua tables and lists become Lua arrays.
 
         '';
         example = lib.literalExpression ''
@@ -91,34 +101,10 @@ in
           submap = reset
         '';
         description = ''
-          Extra configuration lines to add to `/etc/xdg/breakland/breakland.conf`.
+          Extra Lua configuration lines appended to the generated config.
         '';
       };
 
-      topPrefixes = lib.mkOption {
-        type = with lib.types; listOf str;
-        default = [
-          "$"
-          "bezier"
-        ];
-        example = [
-          "$"
-          "bezier"
-          "source"
-        ];
-        description = ''
-          List of prefix of attributes to put at the top of the config.
-        '';
-      };
-
-      bottomPrefixes = lib.mkOption {
-        type = with lib.types; listOf str;
-        default = [ ];
-        example = [ "source" ];
-        description = ''
-          List of prefix of attributes to put at the bottom of the config.
-        '';
-      };
     };
   };
   config = lib.mkMerge [
@@ -132,20 +118,45 @@ in
       # Allows BreakLand assets to be accessed from the system profile.
       environment.pathsToLink = [ "/share/breakland" ];
 
-      environment.etc."xdg/breakland/breakland.conf" =
-        let
-          shouldGenerate = cfg.extraConfig != "" || cfg.settings != { };
-        in
-        lib.mkIf shouldGenerate {
-          text =
-            lib.optionalString (cfg.settings != { }) (
-              selflib.toHyprlang {
-                topCommandsPrefixes = cfg.topPrefixes;
-                bottomCommandsPrefixes = cfg.bottomPrefixes;
-              } cfg.settings
-            )
-            + lib.optionalString (cfg.extraConfig != "") cfg.extraConfig;
+      environment.systemPackages = [ cfg.package ] ++ lib.optional cfg.shell.enable cfg.shell.package;
+
+      systemd.user.services.breakland-shell = lib.mkIf cfg.shell.enable {
+        description = "BreakLand Quickshell desktop shell";
+        wantedBy = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" ];
+        serviceConfig = {
+          ExecStart = "${cfg.shell.package}/bin/breakland-shell";
+          Restart = "on-failure";
+          RestartSec = 2;
         };
+      };
+
+      environment.etc."xdg/breakland/breakland.lua" = {
+        text = selflib.toBreaklandLua {
+          settings = lib.recursiveUpdate {
+            general = {
+              gaps_in = 5;
+              gaps_out = 20;
+              border_size = 2;
+              layout = "dwindle";
+            };
+            misc = {
+              disable_hyprland_logo = true;
+              disable_splash_rendering = true;
+              background_color = 4278190080;
+              font_family = "Sans";
+            };
+            input = {
+              kb_layout = "us";
+            };
+          } cfg.settings;
+          keybindings = {
+            "SUPER + Return" = "foot";
+            "SUPER + Space" = "fuzzel";
+          };
+          extraConfig = cfg.extraConfig;
+        };
+      };
     })
   ];
 }

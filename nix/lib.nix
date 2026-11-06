@@ -65,7 +65,7 @@ let
           "HDMI-A-1" = "1920x1080@60,0x0,1";
         };
         exec = [
-          "waybar"
+          "breakland-shell"
           "dunst"
         ];
       };
@@ -76,7 +76,7 @@ let
     ```nix
     "$mod = SUPER"
     "monitor:HDMI-A-1 = 1920x1080@60,0x0,1"
-    "exec = waybar"
+    "exec = breakland-shell"
     "exec = dunst"
     ```
 
@@ -198,7 +198,36 @@ let
         ) { } (builtins.attrNames attrs);
     in
     flattenAttrs' "" attrs;
+
+  luaKey = key:
+    if builtins.match "^[A-Za-z_][A-Za-z0-9_]*$" key != null then key else "[${builtins.toJSON key}]";
+
+  toLuaValue = value:
+    if value == null then
+      "nil"
+    else if builtins.isAttrs value then
+      "{ "
+      + concatMapStrings (key: "${luaKey key} = ${toLuaValue value.${key}}, ") (attrNames value)
+      + "}"
+    else if builtins.isList value then
+      "{ " + concatMapStrings (item: "${toLuaValue item}, ") value + "}"
+    else if builtins.isBool value then
+      if value then "true" else "false"
+    else if builtins.isInt value || builtins.isFloat value then
+      toString value
+    else
+      builtins.toJSON (toString value);
+
+  toBreaklandLua =
+    {
+      settings ? { },
+      keybindings ? { },
+      extraConfig ? "",
+    }:
+    "hl.config(${toLuaValue settings})\n"
+    + concatMapStrings (key: "hl.bind(${builtins.toJSON key}, hl.dsp.exec_cmd(${builtins.toJSON keybindings.${key}}))\n") (attrNames keybindings)
+    + extraConfig;
 in
 {
-  inherit flattenAttrs toHyprlang;
+  inherit flattenAttrs toHyprlang toBreaklandLua;
 }

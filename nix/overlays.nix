@@ -65,6 +65,8 @@ in
 
       breakland-with-tests = final.breakland.override { withTests = true; };
 
+      breakland-shell = final.callPackage ./shell.nix { };
+
       # deprecated packages
       breakland-legacy-renderer = builtins.trace ''
         breakland-legacy-renderer was removed. Please use the breakland package.
