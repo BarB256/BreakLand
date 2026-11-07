@@ -187,6 +187,7 @@
            breakland-unwrapped
            breakland-with-tests
            breakland-shell
+           breakland-desktop
            xdg-desktop-portal-breakland
           ;
         inherit (pkgsDebugFor.${system}) breakland-debug;

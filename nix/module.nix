@@ -53,10 +53,22 @@ in
         description = "Application launcher command used by the default keybindings.";
       };
 
+      fileManager = lib.mkOption {
+        type = lib.types.str;
+        default = "dolphin";
+        description = "File manager command used by the default keybindings.";
+      };
+
       keybindings = lib.mkOption {
         type = with lib.types; attrsOf str;
         default = { };
         description = "Keybindings mapping a key chord to an executable command.";
+      };
+
+      dispatchers = lib.mkOption {
+        type = with lib.types; attrsOf str;
+        default = { };
+        description = "Keybindings mapping a key chord to a BreakLand dispatcher expression.";
       };
 
       shell = {
@@ -150,7 +162,9 @@ in
           background = cfg.background;
           terminal = cfg.terminal;
           launcher = cfg.launcher;
-          keybindings = lib.recursiveUpdate { "SUPER + L" = "breakland-shell --lock"; } cfg.keybindings;
+          fileManager = cfg.fileManager;
+          keybindings = cfg.keybindings;
+          dispatchers = cfg.dispatchers;
         };
       };
     })

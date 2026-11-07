@@ -67,6 +67,11 @@ in
 
       breakland-shell = final.callPackage ./shell.nix { };
 
+      breakland-desktop = final.callPackage ./desktop.nix {
+        breakland = final.breakland;
+        breakland-shell = final.breakland-shell;
+      };
+
       # deprecated packages
       breakland-legacy-renderer = builtins.trace ''
         breakland-legacy-renderer was removed. Please use the breakland package.

@@ -222,9 +222,11 @@ let
     {
       settings ? { },
       keybindings ? { },
+      dispatcherBindings ? { },
       extraConfig ? "",
     }:
     "hl.config(${toLuaValue settings})\n"
+    + concatMapStrings (key: "hl.bind(${builtins.toJSON key}, ${dispatcherBindings.${key}})\n") (attrNames dispatcherBindings)
     + concatMapStrings (key: "hl.bind(${builtins.toJSON key}, hl.dsp.exec_cmd(${builtins.toJSON keybindings.${key}}))\n") (attrNames keybindings)
     + extraConfig;
 in
