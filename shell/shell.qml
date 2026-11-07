@@ -36,7 +36,10 @@ ShellRoot {
         id: pam
         config: "login"
 
-        onResponseRequired: respond(root.password)
+        onPamMessage: {
+            if (responseRequired)
+                pam.respond(root.password)
+        }
         onCompleted: function (result) {
             if (result === PamResult.Success) {
                 root.unlocking = true
