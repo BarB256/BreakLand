@@ -10,6 +10,8 @@
   binutils,
   cairo,
   epoll-shim,
+  ghostty,
+  fuzzel,
   git,
   glaze-breakland,
   glslang,
@@ -240,15 +242,18 @@ customStdenv.mkDerivation (finalAttrs: {
     mv $out/bin/start-breakland $out/bin/start-breakland-bin
     substitute ${./start-breakland.sh} $out/bin/start-breakland \
       --replace-fail @BREAKLAND_GENERATOR@ $out/share/breakland/generate-config.nix \
-      --replace-fail @START_BREAKLAND_BIN@ $out/bin/start-breakland-bin
+      --replace-fail @START_BREAKLAND_BIN@ $out/bin/start-breakland-bin \
+      --replace-fail @BREAKLAND_RUNTIME_PATH@ "${makeBinPath [ ghostty fuzzel ]}"
     chmod 755 $out/bin/start-breakland
 
     ${optionalString wrapRuntimeDeps ''
       wrapProgram $out/bin/breakland \
         --suffix PATH : ${
-          makeBinPath [
-            binutils
-            hyprland-guiutils
+           makeBinPath [
+             binutils
+             ghostty
+             fuzzel
+             hyprland-guiutils
             pciutils
             pkgconf
           ]

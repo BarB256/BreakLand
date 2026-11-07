@@ -43,7 +43,7 @@ in
 
       terminal = lib.mkOption {
         type = lib.types.str;
-        default = "foot";
+        default = "ghostty";
         description = "Terminal command used by the default keybindings.";
       };
 

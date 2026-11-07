@@ -7,7 +7,7 @@ let
   compositor = config.compositor or { };
   font = config.font or { };
   background = config.background or { };
-  terminal = config.terminal or "foot";
+  terminal = config.terminal or "ghostty";
 
   settings = lib.recursiveUpdate {
     general = {
