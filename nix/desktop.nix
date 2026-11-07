@@ -20,7 +20,7 @@ let
     }
     trap cleanup EXIT INT TERM
 
-    ${breakland}/bin/start-breakland --path ${breakland}/bin/breakland "$@" &
+    ${breakland}/bin/start-breakland "$@" &
     COMPOSITOR_PID=$!
 
     for _ in $(seq 1 100); do
