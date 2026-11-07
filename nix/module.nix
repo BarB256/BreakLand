@@ -150,7 +150,7 @@ in
           background = cfg.background;
           terminal = cfg.terminal;
           launcher = cfg.launcher;
-          keybindings = cfg.keybindings;
+          keybindings = lib.recursiveUpdate { "SUPER + L" = "breakland-shell --lock"; } cfg.keybindings;
         };
       };
     })

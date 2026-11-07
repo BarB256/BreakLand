@@ -32,6 +32,7 @@ let
   keybindings = lib.recursiveUpdate {
     "SUPER + Return" = terminal;
     "SUPER + Space" = config.launcher or "fuzzel";
+    "SUPER + L" = "breakland-shell --lock";
   } (config.keybindings or { });
 in
 selflib.toBreaklandLua {

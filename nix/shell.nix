@@ -14,9 +14,17 @@ stdenvNoCC.mkDerivation {
   installPhase = ''
     mkdir -p $out/share/breakland-shell
     cp shell.qml $out/share/breakland-shell/shell.qml
+    install -Dm644 ${../skull.txt} $out/share/breakland-shell/skull.txt
 
-    makeWrapper ${quickshell}/bin/quickshell $out/bin/breakland-shell \
-      --add-flags "-p $out/share/breakland-shell"
+    cat > $out/bin/breakland-shell <<EOF
+    #!${stdenvNoCC.shell}
+    if [ "\$1" = "--lock" ]; then
+      shift
+      exec ${quickshell}/bin/quickshell ipc call breakland lock "\$@"
+    fi
+    exec ${quickshell}/bin/quickshell -p $out/share/breakland-shell "\$@"
+    EOF
+    chmod 755 $out/bin/breakland-shell
   '';
 
   meta = {
