@@ -10,6 +10,8 @@
   binutils,
   cairo,
   epoll-shim,
+  ghostty,
+  fuzzel,
   git,
   glaze-breakland,
   glslang,
@@ -122,7 +124,7 @@ customStdenv.mkDerivation (finalAttrs: {
             ../systemd
             ../VERSION
             (fs.fileFilter (file: file.hasExt "1") ../docs)
-            (fs.fileFilter (file: file.hasExt "conf" || file.hasExt "in" || file.hasExt "lua" ) ../example)
+            (fs.fileFilter (file: file.hasExt "conf" || file.hasExt "in") ../example)
             (fs.fileFilter (file: file.hasExt "sh") ../scripts)
             (fs.fileFilter (file: file.name == "CMakeLists.txt") ../.)
             (optional withTests [
@@ -234,12 +236,24 @@ customStdenv.mkDerivation (finalAttrs: {
   };
 
   postInstall = ''
+    install -Dm644 ${./generate-config.nix} $out/share/breakland/generate-config.nix
+    install -Dm644 ${./lib.nix} $out/share/breakland/lib.nix
+
+    mv $out/bin/start-breakland $out/bin/start-breakland-bin
+    substitute ${./start-breakland.sh} $out/bin/start-breakland \
+      --replace-fail @BREAKLAND_GENERATOR@ $out/share/breakland/generate-config.nix \
+      --replace-fail @START_BREAKLAND_BIN@ $out/bin/start-breakland-bin \
+      --replace-fail @BREAKLAND_RUNTIME_PATH@ "$out/bin:${makeBinPath [ ghostty fuzzel ]}"
+    chmod 755 $out/bin/start-breakland
+
     ${optionalString wrapRuntimeDeps ''
       wrapProgram $out/bin/breakland \
         --suffix PATH : ${
-          makeBinPath [
-            binutils
-            hyprland-guiutils
+           makeBinPath [
+             binutils
+             ghostty
+             fuzzel
+             hyprland-guiutils
             pciutils
             pkgconf
           ]
@@ -258,6 +272,6 @@ customStdenv.mkDerivation (finalAttrs: {
     description = "A focused tiling Wayland compositor";
     license = lib.licenses.bsd3;
     platforms = lib.platforms.linux;
-    mainProgram = "breakland";
+    mainProgram = "start-breakland";
   };
 })

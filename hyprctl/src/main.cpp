@@ -88,9 +88,9 @@ std::string getRuntimeDir() {
     const auto XDG = getenv("XDG_RUNTIME_DIR");
 
     if (!XDG)
-        return std::format("/run/user/{}/hypr", getUID());
+        return std::format("/run/user/{}/breakland", getUID());
 
-    return std::format("{}/hypr", XDG);
+    return std::format("{}/breakland", XDG);
 }
 
 static std::optional<uint64_t> toUInt64(const std::string_view str) {

@@ -169,7 +169,7 @@
             hooks = {
               breakland-treewide-formatter = {
                 enable = true;
-                entry = "${self.formatter.${system}}/bin/hyprland-treewide-formatter";
+                entry = "${self.formatter.${system}}/bin/breakland-treewide-formatter";
                 pass_filenames = false;
                 excludes = [ "subprojects" ];
                 always_run = true;
@@ -186,6 +186,8 @@
            breakland
            breakland-unwrapped
            breakland-with-tests
+           breakland-shell
+           breakland-desktop
            xdg-desktop-portal-breakland
           ;
         inherit (pkgsDebugFor.${system}) breakland-debug;

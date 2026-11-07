@@ -7,8 +7,7 @@ inputs:
 }:
 let
   inherit (pkgs.stdenv.hostPlatform) system;
-  selflib = import ./lib.nix lib;
-  cfg = config.programs.breakland;
+   cfg = config.programs.breakland;
 in
 {
   options = {
@@ -27,8 +26,67 @@ in
         description = "The BreakLand desktop portal package.";
       };
 
+      font = lib.mkOption {
+        type = with lib.types; attrsOf (oneOf [ str int ]);
+        default = {
+          family = "Sans";
+          size = 11;
+        };
+        description = "Default BreakLand and shell font settings.";
+      };
+
+      background = lib.mkOption {
+        type = with lib.types; attrsOf str;
+        default = { color = "0xff000000"; };
+        description = "Default BreakLand background settings.";
+      };
+
+      terminal = lib.mkOption {
+        type = lib.types.str;
+        default = "ghostty";
+        description = "Terminal command used by the default keybindings.";
+      };
+
+      launcher = lib.mkOption {
+        type = lib.types.str;
+        default = "fuzzel";
+        description = "Application launcher command used by the default keybindings.";
+      };
+
+      fileManager = lib.mkOption {
+        type = lib.types.str;
+        default = "dolphin";
+        description = "File manager command used by the default keybindings.";
+      };
+
+      keybindings = lib.mkOption {
+        type = with lib.types; attrsOf str;
+        default = { };
+        description = "Keybindings mapping a key chord to an executable command.";
+      };
+
+      dispatchers = lib.mkOption {
+        type = with lib.types; attrsOf str;
+        default = { };
+        description = "Keybindings mapping a key chord to a BreakLand dispatcher expression.";
+      };
+
+      shell = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether to install the BreakLand Quickshell desktop shell.";
+        };
+
+        package = lib.mkOption {
+          type = lib.types.package;
+          default = inputs.self.packages.${system}.breakland-shell;
+          description = "The BreakLand Quickshell package.";
+        };
+      };
+
       settings = lib.mkOption {
-        type =
+          type =
           with lib.types;
           let
             valueType =
@@ -48,12 +106,8 @@ in
           valueType;
         default = { };
         description = ''
-          BreakLand configuration written in Nix. Entries with the same key
-          should be written as lists. Variables' and colors' names should be
-          quoted. See <https://wiki.hypr.land> for more examples.
-
-          Special categories (e.g `devices`) should be written as
-          `"devices[device-name]"`.
+          BreakLand compositor settings written in Nix. Nested attribute sets
+          become Lua tables and lists become Lua arrays.
 
         '';
         example = lib.literalExpression ''
@@ -75,50 +129,6 @@ in
         '';
       };
 
-      extraConfig = lib.mkOption {
-        type = lib.types.lines;
-        default = "";
-        example = ''
-          # window resize
-          bind = $mod, S, submap, resize
-
-          submap = resize
-          binde = , right, resizeactive, 10 0
-          binde = , left, resizeactive, -10 0
-          binde = , up, resizeactive, 0 -10
-          binde = , down, resizeactive, 0 10
-          bind = , escape, submap, reset
-          submap = reset
-        '';
-        description = ''
-          Extra configuration lines to add to `/etc/xdg/breakland/breakland.conf`.
-        '';
-      };
-
-      topPrefixes = lib.mkOption {
-        type = with lib.types; listOf str;
-        default = [
-          "$"
-          "bezier"
-        ];
-        example = [
-          "$"
-          "bezier"
-          "source"
-        ];
-        description = ''
-          List of prefix of attributes to put at the top of the config.
-        '';
-      };
-
-      bottomPrefixes = lib.mkOption {
-        type = with lib.types; listOf str;
-        default = [ ];
-        example = [ "source" ];
-        description = ''
-          List of prefix of attributes to put at the bottom of the config.
-        '';
-      };
     };
   };
   config = lib.mkMerge [
@@ -132,20 +142,31 @@ in
       # Allows BreakLand assets to be accessed from the system profile.
       environment.pathsToLink = [ "/share/breakland" ];
 
-      environment.etc."xdg/breakland/breakland.conf" =
-        let
-          shouldGenerate = cfg.extraConfig != "" || cfg.settings != { };
-        in
-        lib.mkIf shouldGenerate {
-          text =
-            lib.optionalString (cfg.settings != { }) (
-              selflib.toHyprlang {
-                topCommandsPrefixes = cfg.topPrefixes;
-                bottomCommandsPrefixes = cfg.bottomPrefixes;
-              } cfg.settings
-            )
-            + lib.optionalString (cfg.extraConfig != "") cfg.extraConfig;
+      environment.systemPackages = [ cfg.package ] ++ lib.optional cfg.shell.enable cfg.shell.package;
+
+      systemd.user.services.breakland-shell = lib.mkIf cfg.shell.enable {
+        description = "BreakLand Quickshell desktop shell";
+        wantedBy = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" ];
+        serviceConfig = {
+          ExecStart = "${cfg.shell.package}/bin/breakland-shell";
+          Restart = "on-failure";
+          RestartSec = 2;
         };
+      };
+
+      environment.etc."xdg/breakland/config.nix" = {
+        text = builtins.toJSON {
+          compositor = cfg.settings;
+          font = cfg.font;
+          background = cfg.background;
+          terminal = cfg.terminal;
+          launcher = cfg.launcher;
+          fileManager = cfg.fileManager;
+          keybindings = cfg.keybindings;
+          dispatchers = cfg.dispatchers;
+        };
+      };
     })
   ];
 }

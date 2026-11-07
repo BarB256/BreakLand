@@ -29,7 +29,7 @@ local function launch_first_installed(candidates)
 end
 
 hl.bind("SUPER + Q", function()
-    launch_first_installed({ "kitty", "alacritty", "foot", "wezterm", "gnome-terminal", "xterm" })
+    launch_first_installed({ "ghostty", "kitty", "alacritty", "wezterm", "gnome-terminal", "xterm" })
 end)
 
 hl.bind("SUPER + R", hl.dsp.exec_cmd("hyprland-run"))

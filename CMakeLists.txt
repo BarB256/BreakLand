@@ -611,9 +611,6 @@ install(FILES ${INSTALLABLE_ASSETS}
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/breakland)
 
 # default lua config
-install(FILES ${CMAKE_SOURCE_DIR}/example/breakland.lua
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/breakland)
-
 # LuaLS stubs
 install(FILES ${CMAKE_SOURCE_DIR}/meta/hl.meta.lua
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/breakland/stubs)

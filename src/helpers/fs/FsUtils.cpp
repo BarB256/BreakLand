@@ -74,7 +74,7 @@ std::optional<std::string> NFsUtils::readFileAsString(const std::string& path) {
 bool NFsUtils::writeToFile(const std::string& path, const std::string& content) {
     std::ofstream of(path, std::ios::trunc);
     if (!of.good()) {
-        LOG(Log::ERR, "CVersionKeeperManager: couldn't open an ofstream for writing the version file.");
+        LOG(Log::ERR, "BreakLand: couldn't open an ofstream for writing the version file.");
         return false;
     }
 
