@@ -243,7 +243,7 @@ customStdenv.mkDerivation (finalAttrs: {
     substitute ${./start-breakland.sh} $out/bin/start-breakland \
       --replace-fail @BREAKLAND_GENERATOR@ $out/share/breakland/generate-config.nix \
       --replace-fail @START_BREAKLAND_BIN@ $out/bin/start-breakland-bin \
-      --replace-fail @BREAKLAND_RUNTIME_PATH@ "${makeBinPath [ ghostty fuzzel ]}"
+      --replace-fail @BREAKLAND_RUNTIME_PATH@ "$out/bin:${makeBinPath [ ghostty fuzzel ]}"
     chmod 755 $out/bin/start-breakland
 
     ${optionalString wrapRuntimeDeps ''
