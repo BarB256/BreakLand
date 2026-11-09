@@ -42,9 +42,12 @@ let
     fi
 
     WAYLAND_DISPLAY=$(sed -n '2p' "$LOCK_FILE")
+    BREAKLAND_INSTANCE_SIGNATURE=$(basename "$(dirname "$LOCK_FILE")")
     export WAYLAND_DISPLAY
+    export BREAKLAND_INSTANCE_SIGNATURE
 
-    ${breakland-shell}/bin/breakland-shell &
+    SHELL_LOG="$RUNTIME_DIR/breakland-shell.log"
+    ${breakland-shell}/bin/breakland-shell >"$SHELL_LOG" 2>&1 &
     SHELL_PID=$!
 
     wait "$COMPOSITOR_PID"

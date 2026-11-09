@@ -6,6 +6,15 @@
 }:
 let
   launcher = writeShellScript "breakland-shell" ''
+    RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/tmp}"
+    if [ -z "''${BREAKLAND_INSTANCE_SIGNATURE:-}" ]; then
+      LOCK_FILE=$(find "$RUNTIME_DIR/breakland" -name breakland.lock -type f -print -quit 2>/dev/null || true)
+      if [ -n "$LOCK_FILE" ]; then
+        export BREAKLAND_INSTANCE_SIGNATURE=$(basename "$(dirname "$LOCK_FILE")")
+        export WAYLAND_DISPLAY=$(sed -n '2p' "$LOCK_FILE")
+      fi
+    fi
+
     if [ "$1" = "--lock" ]; then
       shift
       exec ${quickshell}/bin/quickshell ipc call breakland lock "$@"

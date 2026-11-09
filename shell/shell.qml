@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
@@ -293,6 +294,11 @@ ShellRoot {
             }
         }
 
+    }
+
+    Variants {
+        model: Quickshell.screens
+
         PanelWindow {
             required property var modelData
             screen: modelData
@@ -341,7 +347,7 @@ ShellRoot {
                         }
 
                         ToolTip.visible: mouse.containsMouse
-                        ToolTip.text: "Workspace " + (index + 1)
+                        ToolTip.text: "Workspace " + modelData.id
 
                         MouseArea {
                             id: mouse
