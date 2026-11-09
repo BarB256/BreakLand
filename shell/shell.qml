@@ -15,6 +15,10 @@ ShellRoot {
     property string errorMessage: ""
     property var workspaces: []
     property int activeWorkspace: 1
+    property string volumeStatus: "--"
+    property string brightnessStatus: "--"
+    property string batteryStatus: "--"
+    property string networkStatus: "--"
 
     function refreshWorkspaces() {
         if (!workspaceQuery.running)
@@ -63,7 +67,13 @@ ShellRoot {
         interval: 1000
         running: true
         repeat: true
-        onTriggered: root.refreshWorkspaces()
+        onTriggered: {
+            root.refreshWorkspaces()
+            if (!volumeQuery.running) volumeQuery.running = true
+            if (!brightnessQuery.running) brightnessQuery.running = true
+            if (!batteryQuery.running) batteryQuery.running = true
+            if (!networkQuery.running) networkQuery.running = true
+        }
     }
 
     Process {
@@ -79,6 +89,78 @@ ShellRoot {
     Process {
         id: lockProcess
         command: ["breakland-shell", "--lock"]
+    }
+
+    Process {
+        id: volumeMuteProcess
+        command: ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]
+    }
+
+    Process {
+        id: volumeStepProcess
+        command: ["wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@", "5%+"]
+    }
+
+    Process {
+        id: brightnessStepProcess
+        command: ["brightnessctl", "-e4", "-n2", "set", "5%+"]
+    }
+
+    Process {
+        id: volumeQuery
+        command: ["sh", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const match = text.match(/Volume:\s+([0-9.]+)/)
+                root.volumeStatus = match ? Math.round(Number(match[1]) * 100) + "%" : "--"
+                if (text.includes("MUTED")) root.volumeStatus = "muted"
+            }
+        }
+    }
+
+    Process {
+        id: brightnessQuery
+        command: ["sh", "-c", "brightnessctl -m 2>/dev/null || true"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const match = text.match(/;([0-9]+)%;/)
+                root.brightnessStatus = match ? match[1] + "%" : "--"
+            }
+        }
+    }
+
+    Process {
+        id: batteryQuery
+        command: ["sh", "-c", "for b in /sys/class/power_supply/BAT*/capacity; do cat \"$b\"; exit; done; echo --"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const value = text.trim()
+                root.batteryStatus = value === "--" ? "--" : value + "%"
+            }
+        }
+    }
+
+    Process {
+        id: networkQuery
+        command: ["sh", "-c", "nmcli -t -f STATE general 2>/dev/null || echo unknown"]
+        stdout: StdioCollector {
+            onStreamFinished: root.networkStatus = text.trim() || "unknown"
+        }
+    }
+
+    Process {
+        id: workspaceNextProcess
+        command: ["breakctl", "dispatch", "hl.dsp.focus({ workspace = 'e+1' })"]
+    }
+
+    Process {
+        id: workspacePreviousProcess
+        command: ["breakctl", "dispatch", "hl.dsp.focus({ workspace = 'e-1' })"]
+    }
+
+    Process {
+        id: sessionAction
+        command: ["true"]
     }
 
     FileView {
@@ -303,7 +385,7 @@ ShellRoot {
             required property var modelData
             screen: modelData
             color: "#090909"
-            implicitHeight: 38
+            implicitHeight: 30
             anchors {
                 top: true
                 left: true
@@ -316,12 +398,6 @@ ShellRoot {
                 anchors.rightMargin: 12
                 spacing: 8
 
-                IconButton {
-                    iconSource: Qt.resolvedUrl("./icons/skull.svg")
-                    tooltipText: "BreakLand launcher · Super+Space"
-                    onClicked: launcherProcess.running = true
-                }
-
                 Repeater {
                     model: root.workspaces.length > 0 ? root.workspaces : [
                         { id: 1, name: "1" },
@@ -333,8 +409,8 @@ ShellRoot {
 
                     Rectangle {
                         required property var modelData
-                        width: 24
-                        height: 24
+                        width: 20
+                        height: 20
                         radius: 3
                         color: modelData.id === root.activeWorkspace ? "#f2f2f2" : "#262626"
 
@@ -354,6 +430,12 @@ ShellRoot {
                             anchors.fill: parent
                             hoverEnabled: true
                             onClicked: workspaceProcess.running = true
+                            onWheel: {
+                                if (wheel.angleDelta.y > 0)
+                                    workspacePreviousProcess.running = true
+                                else
+                                    workspaceNextProcess.running = true
+                            }
 
                             Process {
                                 id: workspaceProcess
@@ -369,48 +451,33 @@ ShellRoot {
 
                 Item { Layout.fillWidth: true }
 
-                Text {
-                    id: clock
-                    color: "#f2f2f2"
-                    font.family: "Sans"
-                    font.pixelSize: 13
-                    text: Qt.formatDateTime(new Date(), "ddd  HH:mm")
-
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: launcherProcess.running = true
-                    }
-
-                    Timer {
-                        interval: 1000
-                        running: true
-                        repeat: true
-                        onTriggered: clock.text = Qt.formatDateTime(new Date(), "ddd  HH:mm")
-                    }
-                }
-
-                IconButton {
-                    iconSource: Qt.resolvedUrl("./icons/terminal.svg")
-                    tooltipText: "Ghostty · Super+Return"
-                    onClicked: {
-                        terminalProcess.running = true
-                    }
-                }
-
                 IconButton {
                     iconSource: Qt.resolvedUrl("./icons/volume.svg")
-                    tooltipText: "Audio"
+                    tooltipText: "Audio: " + root.volumeStatus + " · click mute · wheel adjusts"
+                    onClicked: volumeMuteProcess.running = true
+                    onWheelChanged: {
+                        volumeStepProcess.command = [
+                            "wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@",
+                            delta > 0 ? "5%+" : "5%-",
+                        ]
+                        volumeStepProcess.running = true
+                    }
                 }
 
                 IconButton {
                     iconSource: Qt.resolvedUrl("./icons/network.svg")
-                    tooltipText: "Network"
+                    tooltipText: "Network: " + root.networkStatus
                 }
 
                 IconButton {
                     iconSource: Qt.resolvedUrl("./icons/battery.svg")
-                    tooltipText: "Battery"
+                    tooltipText: "Battery: " + root.batteryStatus + " · wheel adjusts brightness"
+                    onWheelChanged: {
+                        brightnessStepProcess.command = [
+                            "brightnessctl", "-e4", "-n2", "set", delta > 0 ? "5%+" : "5%-",
+                        ]
+                        brightnessStepProcess.running = true
+                    }
                 }
 
                 IconButton {
@@ -421,15 +488,82 @@ ShellRoot {
 
                 IconButton {
                     iconSource: Qt.resolvedUrl("./icons/power.svg")
-                    tooltipText: "Session"
-                    onClicked: {
-                        exitProcess.running = true
-                    }
+                    tooltipText: "Session actions"
+                    onClicked: sessionMenu.open()
                 }
 
-                Process {
-                    id: exitProcess
-                    command: ["breakctl", "dispatch", "hl.dsp.exit()"]
+                Popup {
+                    id: sessionMenu
+                    x: parent.width - width - 8
+                    y: parent.height + 4
+                    width: 180
+                    padding: 8
+                    background: Rectangle {
+                        color: "#101010"
+                        border.color: "#444444"
+                        border.width: 1
+                        radius: 4
+                    }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 4
+
+                        Button {
+                            text: "Lock"
+                            Layout.fillWidth: true
+                            onClicked: {
+                                sessionMenu.close()
+                                lockProcess.running = true
+                            }
+                        }
+
+                        Button {
+                            text: "Exit BreakLand"
+                            Layout.fillWidth: true
+                            onClicked: {
+                                sessionMenu.close()
+                                sessionAction.command = ["breakctl", "dispatch", "hl.dsp.exit()"]
+                                sessionAction.running = true
+                            }
+                        }
+
+                        Button {
+                            text: "Reboot"
+                            Layout.fillWidth: true
+                            onClicked: {
+                                sessionMenu.close()
+                                sessionAction.command = ["systemctl", "reboot"]
+                                sessionAction.running = true
+                            }
+                        }
+
+                        Button {
+                            text: "Power off"
+                            Layout.fillWidth: true
+                            onClicked: {
+                                sessionMenu.close()
+                                sessionAction.command = ["systemctl", "poweroff"]
+                                sessionAction.running = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text {
+                id: clock
+                anchors.centerIn: parent
+                color: "#f2f2f2"
+                font.family: "monospace"
+                font.pixelSize: 11
+                text: Qt.formatDateTime(new Date(), "ddd  HH:mm")
+
+                Timer {
+                    interval: 1000
+                    running: true
+                    repeat: true
+                    onTriggered: clock.text = Qt.formatDateTime(new Date(), "ddd  HH:mm")
                 }
             }
         }

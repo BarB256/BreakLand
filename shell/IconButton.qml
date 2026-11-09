@@ -6,17 +6,18 @@ Rectangle {
 
     property string iconSource
     property string tooltipText
-    signal clicked
+    signal clicked(int button)
+    signal wheelChanged(real delta)
 
-    width: 32
-    height: 32
+    width: 26
+    height: 26
     radius: 5
     color: mouse.containsMouse ? "#292929" : "transparent"
 
     Image {
         anchors.centerIn: parent
-        width: 17
-        height: 17
+        width: 14
+        height: 14
         source: root.iconSource
         sourceSize: Qt.size(32, 32)
         smooth: true
@@ -26,7 +27,9 @@ Rectangle {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
-        onClicked: root.clicked()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onClicked: root.clicked(mouse.button)
+        onWheel: root.wheelChanged(wheel.angleDelta.y)
     }
 
     ToolTip.visible: mouse.containsMouse
