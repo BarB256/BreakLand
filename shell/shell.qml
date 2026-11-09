@@ -12,6 +12,73 @@ ShellRoot {
     property bool unlocking: false
     property string password: ""
     property string errorMessage: ""
+    property var workspaces: []
+    property int activeWorkspace: 1
+
+    function refreshWorkspaces() {
+        if (!workspaceQuery.running)
+            workspaceQuery.running = true
+        if (!activeWorkspaceQuery.running)
+            activeWorkspaceQuery.running = true
+    }
+
+    function updateWorkspaces(raw) {
+        try {
+            const parsed = JSON.parse(raw)
+            if (Array.isArray(parsed))
+                workspaces = parsed.sort((a, b) => a.id - b.id)
+        } catch (error) {
+            console.warn("BreakLand workspace query failed:", error)
+        }
+    }
+
+    function updateActiveWorkspace(raw) {
+        try {
+            const parsed = JSON.parse(raw)
+            if (parsed && parsed.id !== undefined)
+                activeWorkspace = parsed.id
+        } catch (error) {
+            console.warn("BreakLand active workspace query failed:", error)
+        }
+    }
+
+    Process {
+        id: workspaceQuery
+        command: ["breakctl", "-j", "workspaces"]
+        stdout: StdioCollector {
+            onStreamFinished: root.updateWorkspaces(text)
+        }
+    }
+
+    Process {
+        id: activeWorkspaceQuery
+        command: ["breakctl", "-j", "activeworkspace"]
+        stdout: StdioCollector {
+            onStreamFinished: root.updateActiveWorkspace(text)
+        }
+    }
+
+    Timer {
+        interval: 1000
+        running: true
+        repeat: true
+        onTriggered: root.refreshWorkspaces()
+    }
+
+    Process {
+        id: terminalProcess
+        command: ["ghostty"]
+    }
+
+    Process {
+        id: launcherProcess
+        command: ["fuzzel"]
+    }
+
+    Process {
+        id: lockProcess
+        command: ["breakland-shell", "--lock"]
+    }
 
     FileView {
         id: skullFile
@@ -229,8 +296,8 @@ ShellRoot {
         PanelWindow {
             required property var modelData
             screen: modelData
-            color: "#111111"
-            implicitHeight: 34
+            color: "#090909"
+            implicitHeight: 38
             anchors {
                 top: true
                 left: true
@@ -241,21 +308,57 @@ ShellRoot {
                 anchors.fill: parent
                 anchors.leftMargin: 12
                 anchors.rightMargin: 12
-                spacing: 14
+                spacing: 8
 
-                Text {
-                    text: "BreakLand"
-                    color: "#f2f2f2"
-                    font.family: "Sans"
-                    font.pixelSize: 14
-                    font.bold: true
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/skull.svg")
+                    tooltipText: "BreakLand launcher · Super+Space"
+                    onClicked: launcherProcess.running = true
                 }
 
-                Text {
-                    text: "1  2  3  4  5"
-                    color: "#b8b8b8"
-                    font.family: "Sans"
-                    font.pixelSize: 13
+                Repeater {
+                    model: root.workspaces.length > 0 ? root.workspaces : [
+                        { id: 1, name: "1" },
+                        { id: 2, name: "2" },
+                        { id: 3, name: "3" },
+                        { id: 4, name: "4" },
+                        { id: 5, name: "5" },
+                    ]
+
+                    Rectangle {
+                        required property var modelData
+                        width: 24
+                        height: 24
+                        radius: 3
+                        color: modelData.id === root.activeWorkspace ? "#f2f2f2" : "#262626"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData.name || modelData.id
+                            color: modelData.id === root.activeWorkspace ? "#090909" : "#b8b8b8"
+                            font.family: "monospace"
+                            font.pixelSize: 11
+                        }
+
+                        ToolTip.visible: mouse.containsMouse
+                        ToolTip.text: "Workspace " + (index + 1)
+
+                        MouseArea {
+                            id: mouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: workspaceProcess.running = true
+
+                            Process {
+                                id: workspaceProcess
+                                command: [
+                                    "breakctl",
+                                    "dispatch",
+                                    "hl.dsp.focus({ workspace = '" + modelData.name + "' })",
+                                ]
+                            }
+                        }
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -267,12 +370,60 @@ ShellRoot {
                     font.pixelSize: 13
                     text: Qt.formatDateTime(new Date(), "ddd  HH:mm")
 
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: launcherProcess.running = true
+                    }
+
                     Timer {
                         interval: 1000
                         running: true
                         repeat: true
                         onTriggered: clock.text = Qt.formatDateTime(new Date(), "ddd  HH:mm")
                     }
+                }
+
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/terminal.svg")
+                    tooltipText: "Ghostty · Super+Return"
+                    onClicked: {
+                        terminalProcess.running = true
+                    }
+                }
+
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/volume.svg")
+                    tooltipText: "Audio"
+                }
+
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/network.svg")
+                    tooltipText: "Network"
+                }
+
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/battery.svg")
+                    tooltipText: "Battery"
+                }
+
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/lock.svg")
+                    tooltipText: "Lock screen · Super+L"
+                    onClicked: lockProcess.running = true
+                }
+
+                IconButton {
+                    iconSource: Qt.resolvedUrl("./icons/power.svg")
+                    tooltipText: "Session"
+                    onClicked: {
+                        exitProcess.running = true
+                    }
+                }
+
+                Process {
+                    id: exitProcess
+                    command: ["breakctl", "dispatch", "hl.dsp.exit()"]
                 }
             }
         }

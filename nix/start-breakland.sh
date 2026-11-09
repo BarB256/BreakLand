@@ -4,6 +4,7 @@ set -eu
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/breakland"
 CONFIG="$CONFIG_DIR/config.nix"
 GENERATOR="@BREAKLAND_GENERATOR@"
+DEFAULT_CONFIG="@BREAKLAND_DEFAULT_CONFIG@"
 START_BREAKLAND="@START_BREAKLAND_BIN@"
 export PATH="@BREAKLAND_RUNTIME_PATH@:$PATH"
 
@@ -19,14 +20,9 @@ if [ ! -e "$CONFIG" ]; then
     IFS="$OLD_IFS"
 fi
 
-if [ ! -e "$CONFIG" ]; then
+if [ ! -e "$CONFIG" ] || grep -q "BreakLand configuration is written in Nix" "$CONFIG" 2>/dev/null; then
     mkdir -p "$CONFIG_DIR"
-    cat > "$CONFIG" <<'EOF'
-{
-  # BreakLand configuration is written in Nix.
-  # Add compositor, font, background, terminal, launcher, and keybindings here.
-}
-EOF
+    cp "$DEFAULT_CONFIG" "$CONFIG"
 fi
 
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"

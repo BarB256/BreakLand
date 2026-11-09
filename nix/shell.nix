@@ -22,7 +22,7 @@ stdenvNoCC.mkDerivation {
   installPhase = ''
     mkdir -p $out/share/breakland-shell
     mkdir -p $out/bin
-    cp shell.qml $out/share/breakland-shell/shell.qml
+    cp -r ./* $out/share/breakland-shell/
     install -Dm644 ${../skull.txt} $out/share/breakland-shell/skull.txt
 
     substitute ${launcher} $out/bin/breakland-shell \

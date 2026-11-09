@@ -12,6 +12,7 @@ let
     RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/tmp}"
     LOCK_FILE=""
     SHELL_PID=""
+    export PATH="${breakland-shell}/bin:${breakland}/bin:$PATH"
 
     cleanup() {
       if [ -n "$SHELL_PID" ]; then

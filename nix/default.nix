@@ -118,6 +118,7 @@ customStdenv.mkDerivation (finalAttrs: {
             ../hyprctl
             ../LICENSE
             ../meta
+            ../nix/default-config.nix
             ../protocols
             ../src
             ../start
@@ -218,6 +219,7 @@ customStdenv.mkDerivation (finalAttrs: {
   ];
 
   strictDeps = true;
+  enableParallelBuilding = false;
 
   cmakeBuildType = if debug then "Debug" else "RelWithDebInfo";
 
@@ -237,11 +239,13 @@ customStdenv.mkDerivation (finalAttrs: {
 
   postInstall = ''
     install -Dm644 ${./generate-config.nix} $out/share/breakland/generate-config.nix
+    install -Dm644 ${./default-config.nix} $out/share/breakland/default-config.nix
     install -Dm644 ${./lib.nix} $out/share/breakland/lib.nix
 
     mv $out/bin/start-breakland $out/bin/start-breakland-bin
     substitute ${./start-breakland.sh} $out/bin/start-breakland \
       --replace-fail @BREAKLAND_GENERATOR@ $out/share/breakland/generate-config.nix \
+      --replace-fail @BREAKLAND_DEFAULT_CONFIG@ $out/share/breakland/default-config.nix \
       --replace-fail @START_BREAKLAND_BIN@ $out/bin/start-breakland-bin \
       --replace-fail @BREAKLAND_RUNTIME_PATH@ "$out/bin:${makeBinPath [ ghostty fuzzel ]}"
     chmod 755 $out/bin/start-breakland

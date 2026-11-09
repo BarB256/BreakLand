@@ -8,6 +8,7 @@ let
   font = config.font or { };
   background = config.background or { };
   terminal = config.terminal or "ghostty";
+  viewport = config.viewport or { };
 
   settings = lib.recursiveUpdate {
     general = {
@@ -88,8 +89,48 @@ let
       { key = "0"; workspace = "10"; }
     ]
   );
+
+  viewportLua = if viewport.enable or false then ''
+    local breaklandViewportPosition = 1
+    local breaklandViewportLeft = ${builtins.toJSON (viewport.leftMonitor or "DP-1")}
+    local breaklandViewportRight = ${builtins.toJSON (viewport.rightMonitor or "DP-2")}
+    local breaklandViewportMaximum = ${toString (viewport.maxPosition or 5)}
+
+    local function breaklandViewportMove(direction)
+      if direction == "right" then
+        if breaklandViewportPosition >= breaklandViewportMaximum then return end
+        breaklandViewportPosition = breaklandViewportPosition + 1
+      elseif direction == "left" then
+        if breaklandViewportPosition <= 1 then return end
+        breaklandViewportPosition = breaklandViewportPosition - 1
+      else
+        return
+      end
+
+      local leftWorkspace = tostring(breaklandViewportPosition)
+      local rightWorkspace = tostring(breaklandViewportPosition + 1)
+
+      hl.dispatch(hl.dsp.workspace.move({ workspace = rightWorkspace, monitor = breaklandViewportRight }))
+      hl.dispatch(hl.dsp.workspace.move({ workspace = leftWorkspace, monitor = breaklandViewportLeft }))
+      hl.dispatch(hl.dsp.focus({ monitor = breaklandViewportRight }))
+      hl.dispatch(hl.dsp.focus({ workspace = rightWorkspace }))
+      hl.dispatch(hl.dsp.focus({ monitor = breaklandViewportLeft }))
+      hl.dispatch(hl.dsp.focus({ workspace = leftWorkspace }))
+
+      for workspace = 1, breaklandViewportMaximum + 1 do
+        local currentWorkspace = tostring(workspace)
+        if currentWorkspace ~= leftWorkspace and currentWorkspace ~= rightWorkspace then
+          hl.dispatch(hl.dsp.workspace.move({ workspace = currentWorkspace, monitor = breaklandViewportLeft }))
+        end
+      end
+    end
+
+    hl.bind("SUPER + CTRL + Right", function() breaklandViewportMove("right") end)
+    hl.bind("SUPER + CTRL + Left", function() breaklandViewportMove("left") end)
+  '' else "";
 in
 selflib.toBreaklandLua {
   inherit settings keybindings;
   dispatcherBindings = dispatcherBindings // workspaceBindings // moveWorkspaceBindings;
+  extraConfig = viewportLua;
 }
