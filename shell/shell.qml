@@ -8,6 +8,7 @@ import Quickshell.Wayland
 
 ShellRoot {
     id: root
+    property var theme: BreakLandTheme { }
 
     property bool locked: false
     property bool unlocking: false
@@ -384,12 +385,23 @@ ShellRoot {
         PanelWindow {
             required property var modelData
             screen: modelData
-            color: "#090909"
-            implicitHeight: 30
+            color: "transparent"
+            implicitHeight: 42
             anchors {
                 top: true
                 left: true
                 right: true
+                topMargin: 6
+                leftMargin: 10
+                rightMargin: 10
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: root.theme.surface
+                border.color: root.theme.border
+                border.width: 1
+                radius: root.theme.radius
             }
 
             RowLayout {
